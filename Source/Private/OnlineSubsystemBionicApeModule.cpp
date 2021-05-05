@@ -1,12 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+#include "OnlineSubsystemBionicApeModule.h"
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 #include "OnlineSubsystemBionicApeModule.h"
 #include "OnlineSubsystemModule.h"
 #include "OnlineSubsystemNames.h"
 #include "OnlineSubsystem.h"
-#include "OnlineSubsystemBionicApe.h"
 
 IMPLEMENT_MODULE(FOnlineSubsystemBionicApeModule, OnlineSubsystemBionicApe);
 

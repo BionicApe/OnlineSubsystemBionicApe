@@ -11,9 +11,12 @@
 #include "BAUsers.h"
 #include "BAUser.h"
 #include "Misc/DefaultValueHelper.h"
+#include "BAIdentitySubsystem.h"
+#include "Engine/Engine.h"
 
 FOnlineIdentityBionicApe::FOnlineIdentityBionicApe(FOnlineSubsystemBionicApe* InSubsystem) : BionicApeSubsystem(InSubsystem)
 {
+
 	//FSoftObjectPath Target = FSoftObjectPath("/Game/ThePrison/Model/Users.Users");
 	//TSoftObjectPtr<UBAUsers> BAUsers = TSoftObjectPtr<UBAUsers>(FSoftObjectPath(Target));
 
@@ -64,8 +67,10 @@ bool FUserOnlineAccountBionicApe::SetUserAttribute(const FString& AttrName, cons
 
 bool FOnlineIdentityBionicApe::Login(int32 LocalUserNum, const FOnlineAccountCredentials& AccountCredentials)
 {
-	FString ErrorStr;
+
 	// valid local player index
+	FString ErrorStr;
+
 	if (LocalUserNum < 0 || LocalUserNum >= MAX_LOCAL_PLAYERS)
 	{
 		ErrorStr = FString::Printf(TEXT("Invalid LocalUserNum=%d"), LocalUserNum);
@@ -74,19 +79,28 @@ bool FOnlineIdentityBionicApe::Login(int32 LocalUserNum, const FOnlineAccountCre
 		return false;
 	}
 
-	if (ValidateCredentials(AccountCredentials))
+	UBAIdentitySubsystem* BAIdentitySubsystem = GEngine->GetEngineSubsystem<UBAIdentitySubsystem>();
+
+	if (!BAIdentitySubsystem)
+	{
+		ErrorStr = TEXT("UBAIdentitySubsystem incorrect or not configured.");
+		UE_LOG_ONLINE_IDENTITY(Warning, TEXT("Login request failed. %s"), *ErrorStr);
+		TriggerOnLoginCompleteDelegates(LocalUserNum, false, FUniqueNetIdBionicApe(), ErrorStr);
+		return false;
+	}
+
+	UBAUser* LogUser = BAIdentitySubsystem->Login(LocalUserNum, AccountCredentials.Type, AccountCredentials.Id, AccountCredentials.Token);//TODO: Notify when it's ready
+
+	if (LogUser)
 	{
 		TSharedPtr<FUserOnlineAccountBionicApe> UserAccountPtr;
-		//FString UserIdStr = FString::FromInt(BAUser->UserID);
+		FString UserIdStr = FString::FromInt(LogUser->UserID);
 
-		//FUniqueNetIdBionicApe NewUserId(UserIdStr);
-		FUniqueNetIdBionicApe NewUserId(AccountCredentials.Id);
+		FUniqueNetIdBionicApe NewUserId(UserIdStr);
 
-		//UserAccountPtr = MakeShareable(new FUserOnlineAccountBionicApe(UserIdStr));
-		//UserAccountPtr->UserAttributes.Add(USER_ATTR_ID, UserIdStr);
-		UserAccountPtr = MakeShareable(new FUserOnlineAccountBionicApe(AccountCredentials.Id));
-		UserAccountPtr->UserAttributes.Add(USER_ATTR_ID, AccountCredentials.Id);
-
+		UserAccountPtr = MakeShareable(new FUserOnlineAccountBionicApe(UserIdStr));
+		UserAccountPtr->UserAttributes.Add(USER_ATTR_ID, UserIdStr);
+		
 		// update/add cached entry for user
 		UserAccounts.Add(NewUserId, UserAccountPtr.ToSharedRef());
 
